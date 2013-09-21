@@ -2604,6 +2604,11 @@ bool Monitor::_ms_dispatch(Message *m)
     if (s->auth_handler) {
       entity_name = s->auth_handler->get_entity_name();
     }
+  } else if (!src_is_mon) {
+    dout(1) << __func__ << " dropping connectionless message " << *m
+            << " from non-mon " << m->get_source_inst() << dendl;
+    m->put();
+    return false;
   }
 
   if (s)

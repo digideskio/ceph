@@ -145,26 +145,29 @@ int safe_write_file(const char *base, const char *file,
   }
 
   ret = fsync(fd);
+  if (ret < 0) ret = -errno;
   TEMP_FAILURE_RETRY(close(fd));
-  if (ret) {
+  if (ret < 0) {
     unlink(tmp);
     return ret;
   }
   ret = rename(tmp, fn);
-  if (ret) {
+  if (ret < 0) {
+    ret = -errno;
     unlink(tmp);
     return ret;
   }
 
   fd = open(base, O_RDONLY);
   if (fd < 0) {
-    ret = errno;
-    return -ret;
+    ret = -errno;
+    return ret;
   }
-  fsync(fd);
+  ret = fsync(fd);
+  if (ret < 0) ret = -errno;
   TEMP_FAILURE_RETRY(close(fd));
 
-  return 0;
+  return ret;
 }
 
 int safe_read_file(const char *base, const char *file,

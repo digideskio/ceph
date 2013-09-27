@@ -771,85 +771,13 @@ int OSD::dump_journal(CephContext *cct, const std::string &dev, const std::strin
 int OSD::write_meta(const std::string &base, const std::string &file,
 		    const char *val, size_t vallen)
 {
-  int ret;
-  char fn[PATH_MAX];
-  char tmp[PATH_MAX];
-  int fd;
-
-  // does the file already have correct content?
-  char oldval[80];
-  ret = read_meta(base, file, oldval, sizeof(oldval));
-  if (ret == (int)vallen && memcmp(oldval, val, vallen) == 0)
-    return 0;  // yes.
-
-  snprintf(fn, sizeof(fn), "%s/%s", base.c_str(), file.c_str());
-  snprintf(tmp, sizeof(tmp), "%s/%s.tmp", base.c_str(), file.c_str());
-  fd = ::open(tmp, O_WRONLY|O_CREAT|O_TRUNC, 0644);
-  if (fd < 0) {
-    ret = errno;
-    derr << "write_meta: error opening '" << tmp << "': "
-	 << cpp_strerror(ret) << dendl;
-    return -ret;
-  }
-  ret = safe_write(fd, val, vallen);
-  if (ret) {
-    derr << "write_meta: failed to write to '" << tmp << "': "
-	 << cpp_strerror(ret) << dendl;
-    TEMP_FAILURE_RETRY(::close(fd));
-    return ret;
-  }
-
-  ret = ::fsync(fd);
-  TEMP_FAILURE_RETRY(::close(fd));
-  if (ret) {
-    ::unlink(tmp);
-    derr << "write_meta: failed to fsync to '" << tmp << "': "
-	 << cpp_strerror(ret) << dendl;
-    return ret;
-  }
-  ret = ::rename(tmp, fn);
-  if (ret) {
-    ::unlink(tmp);
-    derr << "write_meta: failed to rename '" << tmp << "' to '" << fn << "': "
-	 << cpp_strerror(ret) << dendl;
-    return ret;
-  }
-
-  fd = ::open(base.c_str(), O_RDONLY);
-  if (fd < 0) {
-    ret = errno;
-    derr << "write_meta: failed to open dir '" << base << "': "
-	 << cpp_strerror(ret) << dendl;
-    return -ret;
-  }
-  ::fsync(fd);
-  TEMP_FAILURE_RETRY(::close(fd));
-
-  return 0;
+  return safe_write_file(base.c_str(), file.c_str(), val, vallen);
 }
 
 int OSD::read_meta(const  std::string &base, const std::string &file,
 		   char *val, size_t vallen)
 {
-  char fn[PATH_MAX];
-  int fd, len;
-
-  snprintf(fn, sizeof(fn), "%s/%s", base.c_str(), file.c_str());
-  fd = ::open(fn, O_RDONLY);
-  if (fd < 0) {
-    int err = errno;
-    return -err;
-  }
-  len = safe_read(fd, val, vallen);
-  if (len < 0) {
-    TEMP_FAILURE_RETRY(::close(fd));
-    return len;
-  }
-  // close sometimes returns errors, but only after write()
-  TEMP_FAILURE_RETRY(::close(fd));
-
-  val[len] = 0;
-  return len;
+  return safe_read_file(base.c_str(), file.c_str(), val, vallen);
 }
 
 int OSD::write_meta(const std::string &base, uuid_d& cluster_fsid, uuid_d& osd_fsid, int whoami)

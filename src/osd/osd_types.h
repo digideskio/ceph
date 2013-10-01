@@ -2100,7 +2100,7 @@ struct object_info_t {
     FLAG_LOST     = 1<<0,
     FLAG_WHITEOUT = 1<<1,  // object logically does not exist
     // ...
-    FLAG_USES_TMAP = 1<<8,
+    FLAG_USES_TMAP = 1<<8,  // deprecated; no longer used.
   } flag_t;
   flag_t flags;
 

@@ -620,6 +620,18 @@ bool verify_bucket_permission(struct req_state *s, int perm)
 
 bool verify_object_permission(struct req_state *s, RGWAccessControlPolicy *bucket_acl, RGWAccessControlPolicy *object_acl, int perm)
 {
+  if (s->cct->_conf->rgw_defer_to_bucket_acls == "recurse") {
+    bool bucket_ret = verify_bucket_permission(s, perm);
+    if (bucket_ret)
+      return true;
+  }
+
+  if (s->cct->_conf->rgw_defer_to_bucket_acls == "full_control") {
+    bool has_bucket_full_control = verify_bucket_permission(s, RGW_PERM_FULL_CONTROL);
+    if (has_bucket_full_control)
+      return true;
+  }
+
   if (!object_acl)
     return false;
 
